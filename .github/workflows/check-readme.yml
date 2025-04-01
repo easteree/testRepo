@@ -1,0 +1,38 @@
+name: "Check README Merge Base"
+
+on:
+  push:
+    branches:
+      - "*"           # Trigger on all branches
+      - "!main"       # Exclude main branch (it won't trigger the workflow)
+
+jobs:
+  check-readme:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all commit history to ensure we can check the latest README.md
+
+      - name: Get Latest README Version from All Branches
+        run: |
+          # Fetch all remote branches
+          git fetch origin
+
+          # Get the latest commit for README.md
+          LATEST_README_COMMIT=$(git log --pretty=format:"%H" -n 1 -- README.md)
+
+          # Get the current branch's HEAD commit
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+
+          echo "Latest README commit: $LATEST_README_COMMIT"
+          echo "Current commit: $CURRENT_COMMIT"
+
+          # Check if the current branch's README.md is based on the latest commit
+          if ! git merge-base --is-ancestor "$LATEST_README_COMMIT" "$CURRENT_COMMIT"; then
+            echo "ERROR: README.md is not based on the latest version! Please pull the latest README.md, merge locally, and then push again."
+            exit 1
+          fi
